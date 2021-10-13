@@ -65,7 +65,10 @@ def loop_images(images):
     sep_val = np.ones_like(images[0])[:,:20]*255
 
     cv2.namedWindow('processed_image', cv2.WINDOW_KEEPRATIO)
-    cv2.createTrackbar('Threshold', 'processed_image', 100, 255, lambda x: 0)
+    cv2.createTrackbar('Diameter', 'processed_image', 5, 20, lambda x: 0)
+    cv2.createTrackbar('Minmass', 'processed_image', 500, 3000, lambda x: 0)
+    cv2.createTrackbar('Separation', 'processed_image', 0, 40, lambda x: 0)
+
     cv2.resizeWindow('processed_image', 800,600)
 
     fig,ax = plt.subplots(figsize=figsize, dpi=dpi)
@@ -75,11 +78,17 @@ def loop_images(images):
     while cv2.getWindowProperty('processed_image', cv2.WND_PROP_VISIBLE) > 0:
         if not PAUSE:
             proc = pims.as_gray(images[i])
-            found = tp.locate(proc, 11, minmass=5)
+            found = tp.locate(
+                proc, 
+                max([2*cv2.getTrackbarPos('Diameter', 'processed_image') + 1, 3]), 
+                minmass=cv2.getTrackbarPos('Minmass', 'processed_image'),
+                separation=cv2.getTrackbarPos('Separation', 'processed_image')
+            )
+            # found = tp.locate(proc, , minmass=5)
             
             anot = images[i].copy()
             for center in zip(found.x.astype(int), found.y.astype(int)):
-                cv2.circle(img=anot, center=center, radius=5, color=(255,0,0))
+                cv2.circle(img=anot, center=center, radius=6, color=(0,255,0))
             # ax.hist(np.random.normal(size=10000), bins=100)
             # ax.set_ylim(-2,500)
             # ax.set_xlim(-3,3)
