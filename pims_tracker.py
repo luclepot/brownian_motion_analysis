@@ -6,6 +6,8 @@ import glob
 import sys
 import os
 import argparse
+import pims
+import trackpy as tp
 
 ## helper functions
 
@@ -50,8 +52,6 @@ class image_analyzer:
     def get_params(self):
         return self._params
 
-    
-
 def loop_images(images):
     
     i,N = 0,len(images)
@@ -74,40 +74,41 @@ def loop_images(images):
     
     while cv2.getWindowProperty('processed_image', cv2.WND_PROP_VISIBLE) > 0:
         if not PAUSE:
-            gray = cv2.cvtColor(images[i], cv2.COLOR_BGR2GRAY)
-            proc = cv2.threshold(
-                    gray,
-                    cv2.getTrackbarPos('Threshold', 'processed_image'),
-                    255,  cv2.THRESH_BINARY
-                )[1]
-
-            proc[proc == 255]
-
+            proc = pims.as_gray(images[i])
+            found = tp.locate(proc, 11, minmass=5)
+            
+            anot = images[i].copy()
+            for center in zip(found.x.astype(int), found.y.astype(int)):
+                cv2.circle(img=anot, center=center, radius=5, color=(255,0,0))
             # ax.hist(np.random.normal(size=10000), bins=100)
-            ax.set_ylim(-2,500)
-            ax.set_xlim(-3,3)
-            ax.set_ylabel('Count')
-            plt.yticks(fontsize=5)
-            fig.canvas.draw()
+            # ax.set_ylim(-2,500)
+            # ax.set_xlim(-3,3)
+            # ax.set_ylabel('Count')
+            # plt.yticks(fontsize=5)
+            # fig.canvas.draw()
 
-            plot = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8,)
-            plot = plot.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-            plot = cv2.cvtColor(plot,cv2.COLOR_RGB2BGR)
+            # plot = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8,)
+            # plot = plot.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+            # plot = cv2.cvtColor(plot,cv2.COLOR_RGB2BGR)
 
             to_show = np.concatenate([
                 sep_val,
                 images[i], 
                 sep_val,
-                np.tile(gray[:,:,None], (3)),
+                np.tile(proc[:,:,None], (3)).astype(np.uint8),
                 sep_val,
-                np.tile(proc[:,:,None], (3)),
+                anot.astype(np.uint8),
+                # np.tile(anot[:,:,None], (3)),
                 sep_val,
             ], axis=1)
-
+            # print(images[i])
+            # print(np.tile(proc[:,:,np.newaxis], (3,)).astype(np.uint8))
+            # break
+            # cv2.imshow('processed_image', np.concatenate([images[i], np.tile(proc[:,:,np.newaxis], (3,)).astype(np.uint8)], axis=1))
             cv2.imshow(
                 'processed_image', 
-                # to_show,
-                np.concatenate([to_show, plot])
+                to_show,
+                # np.concatenate([to_show, plot])
             )
             i += 1
             if i == N:
@@ -124,5 +125,6 @@ def loop_images(images):
     return 0
 
 if __name__ == '__main__':
-    images = load_images(load_info('brownian_motion/debug_data'))
-    loop_images(images)
+    # images = load_images(load_info('brownian_motion/debug_data'))
+    frames = pims.open('brownian_motion/debug_data/*.bmp')
+    loop_images(frames)
