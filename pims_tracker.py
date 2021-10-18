@@ -1,3 +1,13 @@
+import argparse
+import sys
+
+parser = argparse.ArgumentParser(description='parser for pims_tracker')
+
+parser.add_argument('--input', metavar='input_path', type=str, nargs=1, required=True, help='glob-string input for data')
+parser.add_argument('--output', metavar='output_path', type=str, required=False, nargs=1, help='out path for saved data', default='NONE')
+
+args = parser.parse_args()
+
 import cv2
 import numpy as np
 import pandas as pd
@@ -5,10 +15,10 @@ import matplotlib.pyplot as plt
 import glob
 import sys
 import os
-import argparse
 import pims
 import trackpy as tp
 import datetime
+
 
 _THIS_PATH = os.path.dirname(os.path.realpath(__file__))
 ## helper functions
@@ -54,7 +64,7 @@ class image_analyzer:
     def get_params(self):
         return self._params
 
-def loop_images(images):
+def loop_images(images, save_path):
     
     i,N = 0,len(images)
 
@@ -70,7 +80,7 @@ def loop_images(images):
     cv2.createTrackbar('Diameter', 'processed_image', 5, 20, lambda x: 0)
     cv2.createTrackbar('Minmass', 'processed_image', 500, 3000, lambda x: 0)
     cv2.createTrackbar('Separation', 'processed_image', 2, 40, lambda x: 0)
-    cv2.createTrackbar('# Frames to Save', 'processed_image', 50, 100, lambda x: 0)
+    cv2.createTrackbar('# Frames to Save', 'processed_image', 100, 1000, lambda x: 0)
     cv2.createTrackbar('lost particle memory', 'processed_image', 5, 30, lambda x: 0)
 
     cv2.resizeWindow('processed_image', 800,600)
@@ -91,6 +101,12 @@ def loop_images(images):
     plot = plot.reshape(fig.canvas.get_width_height()[::-1] + (3,))
     plot = cv2.cvtColor(plot,cv2.COLOR_RGB2BGR)
             
+    print('ENTERING CV2 INTERFACE')
+    print('keybindings to know:')
+    print(' - s: start save')
+    print(' - spacebar: pause loop')
+    print(' - esc: exit program')
+
     while cv2.getWindowProperty('processed_image', cv2.WND_PROP_VISIBLE) > 0:
         if not PAUSE:
             proc = pims.as_gray(images[i])
@@ -111,7 +127,6 @@ def loop_images(images):
                 if link is None:
                     f_history = pd.DataFrame()
                     f_history_i = 0
-                    f_history_i0 = t
                     ax.clear()
                     link = tp.linking.Linker(
                         search_range=10,
@@ -145,15 +160,18 @@ def loop_images(images):
                 # np.tile(anot[:,:,None], (3)),
                 sep_val,
             ], axis=1)
-            # print(images[i])
-            # print(np.tile(proc[:,:,np.newaxis], (3,)).astype(np.uint8))
-            # break
-            # cv2.imshow('processed_image', np.concatenate([images[i], np.tile(proc[:,:,np.newaxis], (3,)).astype(np.uint8)], axis=1))
-            # if plot is not None:
+
+            to_show = np.concatenate([to_show, plot])
+
+            cv2.putText(
+                to_show, 'frame {:03}/{:03}'.format(i, len(frames)), 
+                org=(10,582), fontFace=cv2.FONT_HERSHEY_PLAIN, 
+                fontScale=1.3, color=(0,0,0), thickness=2
+            )
+
             cv2.imshow(
                 'processed_image', 
-                # to_show,
-                np.concatenate([to_show, plot])
+                to_show,
             )
             # else:
             #     cv2.imshow(
@@ -170,16 +188,24 @@ def loop_images(images):
             break
         if k == ord(' '):
             PAUSE = not PAUSE
-        if k == ord('s') or f_history_i >= cv2.getTrackbarPos('# Frames to Save', 'processed_image') or f_history_i + f_history_i0 > len(images):
+        if k == ord('s') or f_history_i >= cv2.getTrackbarPos('# Frames to Save', 'processed_image') or f_history_i  == len(images):
             if SAVE_F_HISTORY:
                 print('stopping save at {} frames'.format(f_history_i))
                 
-                now = datetime.datetime.now()
-                folder_name = '{}/data_out/{}'.format(_THIS_PATH, now.strftime('%Y_%b_%d'))
-                filename = '{}_{}-frames.csv'.format(now.strftime('%I:%M:%S-%p'), f_history.frame.nunique())
+                if save_path == 'NONE':
+                    now = datetime.datetime.now()
+                    folder_name = '{}/data_out/{}'.format(_THIS_PATH, now.strftime('%Y_%b_%d'))
+                    filename = '{}_{}-frames.csv'.format(now.strftime('%I:%M:%S-%p'), f_history.frame.nunique())
+
+                    path = os.path.join(folder_name, filename)
+                else:
+                    if not save_path.endswith('.csv'):
+                        save_path += '.csv'
+                    path = save_path
+                    folder_name = os.path.dirname(path)
+
                 if not os.path.exists(folder_name):
-                    os.makedirs(folder_name)
-                path = os.path.join(folder_name, filename)
+                    os.makedirs(folder_name)       
 
                 print('Saving data to "{}"'.format(os.path.abspath(path)))
                 print(' - {} frames'.format(f_history.frame.nunique()))
@@ -189,13 +215,12 @@ def loop_images(images):
 
                 link = None
                 f_history_i = 0
-                f_history_i0 = 0
                 f_history = None
             else:
                 print('Beginning save!')
                 link = None
                 f_history_i = 0
-                f_history_i0 = 0
+                i = 0
                 f_history = None
 
             SAVE_F_HISTORY = not SAVE_F_HISTORY
@@ -205,5 +230,14 @@ def loop_images(images):
 
 if __name__ == '__main__':
     # images = load_images(load_info('brownian_motion/debug_data'))
-    frames = pims.open('brownian_motion/debug_data/*.bmp')
-    loop_images(frames)
+    # print(args.input, args.output)
+    load_path = os.path.abspath(args.input[0])
+    save_path = os.path.abspath(args.output[0])
+    print('loading images from path "{}"'.format(load_path))
+    frames = pims.open(load_path)
+    
+    loop_images(frames, save_path)
+
+    del frames
+    cv2.destroyAllWindows()
+    print('closed window')
