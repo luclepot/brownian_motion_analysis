@@ -11,14 +11,15 @@ args = parser.parse_args()
 import cv2
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import glob
 import sys
 import os
 import pims
 import trackpy as tp
 import datetime
-
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 _THIS_PATH = os.path.dirname(os.path.realpath(__file__))
 ## helper functions
