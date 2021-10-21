@@ -25,6 +25,7 @@ _THIS_PATH = os.path.dirname(os.path.realpath(__file__))
 ## helper functions
 
 def load_info(data_path):
+
     # loads dataframe with all image info (frame #/path) in a given directory. can add more stuff later
     info = pd.DataFrame(glob.glob('{}/*.bmp'.format(data_path)), columns=['path'])
     info['frame'] = info.path.str.replace('.bmp', '').str.split('Frame ').str[1].astype(int)
@@ -108,7 +109,7 @@ def loop_images(images, save_path):
     print(' - spacebar: pause loop')
     print(' - esc: exit program')
 
-    while cv2.getWindowProperty('processed_image', cv2.WND_PROP_VISIBLE) > 0:
+    while True:
         if not PAUSE:
             proc = pims.as_gray(images[i])
             found = tp.locate(
