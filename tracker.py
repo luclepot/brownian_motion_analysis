@@ -32,7 +32,7 @@ def load_info(data_path):
     info.set_index('frame', inplace=True)
     return info.sort_index()
 
-def load_images(info_df, max_frames=None, max_bytes=None,):    
+def load_images(info_df, max_frames=None, max_bytes=None,):
     if not len(info_df) > 0:
         raise Exception('Info dataframe empty')
 
@@ -163,6 +163,11 @@ def loop_images(images, save_path):
                 sep_val,
             ], axis=1)
 
+            len_diff = to_show.shape[1] - plot.shape[1]
+            if len_diff > 0:
+                plot = np.concatenate([plot, np.ones_like(plot[:,:len_diff,:])*255], axis=1)
+            elif len_diff < 0:
+                to_show = np.concatenate([to_show, np.ones_like(to_show[:,:-len_diff,:])*255], axis=1)
             to_show = np.concatenate([to_show, plot])
 
             cv2.putText(
