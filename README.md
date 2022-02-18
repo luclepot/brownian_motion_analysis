@@ -24,7 +24,11 @@ pip install .
 
 to install required dependencies. 
 
-## driver usage
+## analysis
+
+some introductory analysis of the tracked paths is given in `analysis.ipynb` notebook. Run this with jupyter as usual. There you can do tracking etc.
+
+## driver usage (OLD, probably buggy)
 
 To run the tracking driver, use
 
@@ -39,7 +43,3 @@ If you wanted to process a folder of bitmap images named `data_1`, an example of
 ```
 python tracker.py --input=data_1/*.bmp --output=data_1/tracks.csv
 ```
-
-## analysis
-
-some introductory analysis of the tracked paths is given in `analysis.ipynb` notebook. Run this with jupyter as usual.
